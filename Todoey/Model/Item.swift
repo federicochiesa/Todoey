@@ -8,7 +8,7 @@
 
 import Foundation
 
-class Item {
+class Item : Encodable, Decodable {
     init(_ itemName : String) {
         name = itemName
         done = false

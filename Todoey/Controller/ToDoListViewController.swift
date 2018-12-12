@@ -10,15 +10,12 @@ import UIKit
 
 class ToDoListViewController: UITableViewController {
 
-    var itemArray = [Item("Posso")]
-    
-    let defaults = UserDefaults.standard
+    var itemArray = [Item]()
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("todolist.plist")
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        if let items =  defaults.value(forKey: "todolist") as? [Item]{
-            itemArray = items
-        }
+        loadData()
     }
 
     //MARK: TableView data source methods
@@ -39,7 +36,7 @@ class ToDoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
-        tableView.reloadData()
+        saveData()
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
@@ -52,11 +49,34 @@ class ToDoListViewController: UITableViewController {
         }
         let action = UIAlertAction(title: "Add", style: .default) { (action) in
             self.itemArray.append(Item(alert.textFields![0].text!))
-            self.defaults.set(self.itemArray, forKey: "todolist")
-            self.tableView.reloadData()
+            self.saveData()
         }
         alert.addAction(action)
         
         present(alert, animated: true)
+    }
+    
+    //MARK: Data management methods
+    
+    func saveData() {
+        do{
+            let data = try PropertyListEncoder().encode(itemArray)
+            try data.write(to: dataFilePath!)
+        }
+        catch{
+            print("Error encoding")
+        }
+        tableView.reloadData()
+    }
+    
+    func loadData(){
+        if let data = try? Data(contentsOf: dataFilePath!){
+            do{
+                itemArray = try PropertyListDecoder().decode([Item].self, from: data)
+            }
+            catch{
+                print("Error decoding")
+            }
+        }
     }
 }
