@@ -7,11 +7,12 @@
 //
 
 import UIKit
+import CoreData
 
 class ToDoListViewController: UITableViewController {
 
     var itemArray = [Item]()
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("todolist.plist")
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -48,7 +49,10 @@ class ToDoListViewController: UITableViewController {
             alertTextField.placeholder = "New Item"
         }
         let action = UIAlertAction(title: "Add", style: .default) { (action) in
-            self.itemArray.append(Item(alert.textFields![0].text!))
+            let newItem = Item(context: self.context)
+            newItem.name = alert.textFields![0].text!
+            newItem.done = false
+            self.itemArray.append(newItem)
             self.saveData()
         }
         alert.addAction(action)
@@ -60,23 +64,19 @@ class ToDoListViewController: UITableViewController {
     
     func saveData() {
         do{
-            let data = try PropertyListEncoder().encode(itemArray)
-            try data.write(to: dataFilePath!)
+            try context.save()
         }
         catch{
-            print("Error encoding")
+            print("Save Error")
         }
         tableView.reloadData()
     }
     
     func loadData(){
-        if let data = try? Data(contentsOf: dataFilePath!){
-            do{
-                itemArray = try PropertyListDecoder().decode([Item].self, from: data)
-            }
-            catch{
-                print("Error decoding")
-            }
+        do {
+            itemArray = try context.fetch(Item.fetchRequest())
+        } catch  {
+            print("Error reading data")
         }
     }
 }
