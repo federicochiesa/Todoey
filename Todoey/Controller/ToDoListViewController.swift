@@ -12,11 +12,17 @@ import CoreData
 class ToDoListViewController: UITableViewController {
 
     var itemArray = [Item]()
+    var selectedList : List? {
+        didSet{
+            let request : NSFetchRequest<Item> = Item.fetchRequest()
+            request.predicate = NSPredicate(format: "parentList.title MATCHES %@", (self.selectedList?.title)!)
+            loadData(request)
+        }
+    }
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        loadData()
     }
 
     //MARK: TableView data source methods
@@ -52,6 +58,7 @@ class ToDoListViewController: UITableViewController {
             let newItem = Item(context: self.context)
             newItem.name = alert.textFields![0].text!
             newItem.done = false
+            newItem.parentList = self.selectedList
             self.itemArray.append(newItem)
             self.saveData()
         }
@@ -72,11 +79,36 @@ class ToDoListViewController: UITableViewController {
         tableView.reloadData()
     }
     
-    func loadData(){
+    func loadData(_ request : NSFetchRequest<Item> = Item.fetchRequest()){
         do {
-            itemArray = try context.fetch(Item.fetchRequest())
+            itemArray = try context.fetch(request)
         } catch  {
             print("Error reading data")
         }
+        tableView.reloadData()
     }
+}
+
+//MARK: Search bar methods
+
+extension ToDoListViewController : UISearchBarDelegate{
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [NSPredicate(format: "name CONTAINS[cd] %@", searchBar.text!), NSPredicate(format: "parentList.title MATCHES %@", (self.selectedList?.title)!)])
+        request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+        loadData(request)
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text!.count == 0 {
+            let request : NSFetchRequest<Item> = Item.fetchRequest()
+            request.predicate = NSPredicate(format: "parentList.title MATCHES %@", (self.selectedList?.title)!)
+            loadData(request)
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+        }
+        
+    }
+
 }
